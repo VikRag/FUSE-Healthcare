@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MedBridge — Patient · Provider · AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.9.0/dist/tabler-icons.min.css" />
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f3f4f6;color:#111;height:100vh;overflow:hidden;}
+#root{height:100vh;}
+input,textarea,select,button{font-family:inherit;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ── Design tokens ── */
+const C = {
+  teal:  { b50:"#E1F5EE", b100:"#9FE1CB", b400:"#1D9E75", b600:"#0F6E56" },
+  blue:  { b50:"#E6F1FB", b100:"#B5D4F4", b400:"#378ADD", b600:"#185FA5" },
+  amber: { b50:"#FAEEDA", b100:"#FAC775", b400:"#BA7517", b600:"#854F0B" },
+  coral: { b50:"#FAECE7", b100:"#F5C4B3", b400:"#D85A30", b600:"#993C1D" },
+  pink:  { b50:"#FBEAF0", b100:"#F4C0D1", b400:"#D4537E", b600:"#993556" },
+};
+
+/* ── UI atoms ── */
+const Av = ({ ini, c=C.teal, sz=32 }) => (
+  <div style={{width:sz,height:sz,borderRadius:"50%",background:c.b50,color:c.b600,display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*0.35,fontWeight:500,flexShrink:0}}>{ini}</div>
+);
+const Pill = ({ children, c=C.teal }) => (
+  <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,padding:"3px 8px",borderRadius:20,fontWeight:500,background:c.b50,color:c.b600}}>{children}</span>
+);
+const Btn = ({ children, primary, onClick, sx={} }) => (
+  <button onClick={onClick} style={{padding:"7px 14px",borderRadius:8,fontSize:13,cursor:"pointer",border:primary?"none":"0.5px solid #d1d5db",background:primary?C.teal.b600:"white",color:primary?C.teal.b50:"#374151",display:"flex",alignItems:"center",gap:6,...sx}}>{children}</button>
+);
+const Card = ({ children, sx={} }) => (
+  <div style={{background:"white",borderRadius:12,border:"0.5px solid #e5e7eb",padding:"16px 18px",...sx}}>{children}</div>
+);
+
+/* ── Data ── */
+const PATIENTS = [
+  { id:"MB-3847", name:"Sarah Lin",    ini:"SL", c:C.teal,  dx:"Generalized Anxiety Disorder", age:28, meds:["Sertraline 50mg","Lorazepam PRN"], logs:[
+    { date:"Jun 15", mood:"Better", text:"Slept better this week but still feel anxious before work. The breathing exercises helped a little. Not sure if the new medication is making a difference yet.", ai:"" },
+    { date:"Jun 8",  mood:"Same",   text:"Pretty similar to last week. Still struggling with mornings. The journaling exercise felt helpful though.", ai:"Patient reports continued morning difficulties but notes benefit from journaling exercises. Overall mood is stable." },
+  ]},
+  { id:"MB-2210", name:"James Moreno", ini:"JM", c:C.blue,  dx:"Major Depressive Disorder",    age:35, meds:["Bupropion 150mg"], logs:[
+    { date:"Jun 14", mood:"Better", text:"Had a really good week! Went to the gym twice and cooked dinner for myself three times. Feeling more motivated.", ai:"Significant improvement reported. Patient demonstrates increased self-efficacy through exercise and self-care." },
+  ]},
+  { id:"MB-5521", name:"Anika Patel",  ini:"AP", c:C.amber, dx:"PTSD",                          age:42, meds:["Prazosin 2mg"],    logs:[] },
+  { id:"MB-1094", name:"Ryan O'Brien", ini:"RO", c:C.pink,  dx:"Bipolar II",                    age:31, meds:["Lamotrigine 100mg","Quetiapine 50mg"], logs:[
+    { date:"Jun 12", mood:"Harder", text:"Rough week. Didn't sleep much and felt really irritable at work. Hard to focus.", ai:"Patient reports a difficult week: sleep disruption, professional irritability, and concentration difficulties. Monitor for hypomanic indicators." },
+  ]},
+];
+
+const CARE_PLANS_INIT = [
+  { id:1, patient:"Sarah Lin", pid:"MB-3847", date:"Jun 10",
+    original:"Take 50mg Sertraline QD in the morning with food. If anxiety episode occurs, use Lorazepam 0.5mg sublingual PRN, maximum twice weekly. Practice 4-7-8 diaphragmatic breathing 3x/day. Avoid stimulants post 2pm. Return in 3 weeks or sooner if symptoms worsen.",
+    simplified:"Your medication plan:\n• Take your Sertraline (antidepressant) once every morning with food.\n• If you feel a sudden wave of anxiety, you may use your Lorazepam tablet under your tongue. Use this no more than twice a week.\n\nBreathing exercise:\n• Breathe in for 4 counts, hold for 7, breathe out for 8. Do this 3 times a day.\n\nOther tips:\n• Avoid coffee, energy drinks, or anything with caffeine after 2pm.\n\nSee your doctor in 3 weeks, or sooner if things feel worse.", lang:"English" },
+  { id:2, patient:"Ryan O'Brien", pid:"MB-1094", date:"Jun 12",
+    original:"Continue Lamotrigine 100mg BID. Do not abruptly discontinue. Quetiapine 50mg QHS for sleep. Maintain sleep hygiene: consistent bed/wake time, reduce screen time 1hr before bed. Track mood daily using provided PHQ-9 scale. Present to ED if experiencing suicidal ideation.",
+    simplified:"", lang:"English" },
+];
+
+/* ── Claude API ── */
+async function claude(system, user) {
+  const r = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system,messages:[{role:"user",content:user}]})
+  });
+  const d = await r.json();
+  return d.content?.[0]?.text || "";
+}
+
+/* ── Sidebar ── */
+const NAV = [
+  {k:"dash",   ic:"ti-layout-dashboard", lb:"Dashboard",      sec:"Overview"},
+  {k:"pts",    ic:"ti-users",            lb:"Patients",        sec:null},
+  {k:"id",     ic:"ti-id-badge",         lb:"Health Identity", sec:"Pillars"},
+  {k:"ai",     ic:"ti-message-dots",     lb:"AI Sessions",     sec:null},
+  {k:"lit",    ic:"ti-book",             lb:"Care Plans",      sec:null},
+  {k:"mylog",  ic:"ti-pencil",           lb:"My Log",          sec:"Patient"},
+];
+function Sidebar({ pg, go }) {
+  return (
+    <nav style={{width:200,flexShrink:0,background:"white",borderRight:"0.5px solid #e5e7eb",display:"flex",flexDirection:"column",padding:"20px 0"}}>
+      <div style={{padding:"0 16px 20px",borderBottom:"0.5px solid #e5e7eb"}}>
+        <div style={{fontSize:18,fontWeight:600,letterSpacing:"-0.02em"}}>MedBridge</div>
+        <div style={{fontSize:11,color:"#9ca3af",marginTop:2,letterSpacing:"0.04em"}}>Patient · Provider · AI</div>
+      </div>
+      <div style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
+        {NAV.map(n=>(
+          <div key={n.k}>
+            {n.sec&&<div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:"#9ca3af",padding:"12px 16px 4px"}}>{n.sec}</div>}
+            <div onClick={()=>go(n.k)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 16px",fontSize:13,cursor:"pointer",borderLeft:pg===n.k?`2px solid ${C.teal.b400}`:"2px solid transparent",background:pg===n.k?C.teal.b50:"transparent",color:pg===n.k?C.teal.b600:"#6b7280",fontWeight:pg===n.k?500:400}}>
+              <i className={`ti ${n.ic}`} style={{fontSize:16}}/>{n.lb}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{padding:16,borderTop:"0.5px solid #e5e7eb",display:"flex",alignItems:"center",gap:10}}>
+        <Av ini="DK" c={C.teal} sz={32}/>
+        <div><div style={{fontSize:12,fontWeight:500}}>Dr. Keerthika</div><div style={{fontSize:11,color:"#9ca3af"}}>Therapist</div></div>
+      </div>
+    </nav>
+  );
+}
+
+/* ── Dashboard ── */
+function Dashboard({ go, pick }) {
+  const stats=[
+    {lb:"Active patients",v:4,d:"↑ 1 this month",up:true},
+    {lb:"Logs today",v:3,d:"✦ AI-summarised",up:true},
+    {lb:"Care plans sent",v:2,d:"This week",up:false},
+    {lb:"Understanding",v:"91%",d:"+4% vs last month",up:true},
+  ];
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:22,fontWeight:600,letterSpacing:"-0.02em"}}>Good morning, Keerthika</div>
+          <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Monday, June 15 · {PATIENTS.filter(p=>p.logs.length).length} patients have new session logs</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={()=>go("pts")}><i className="ti ti-users"/> Patients</Btn>
+          <Btn primary onClick={()=>go("mylog")}><i className="ti ti-pencil"/> New log</Btn>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+        {stats.map(s=>(
+          <div key={s.lb} style={{background:"#f9fafb",borderRadius:8,padding:"14px 16px"}}>
+            <div style={{fontSize:12,color:"#9ca3af",marginBottom:6}}>{s.lb}</div>
+            <div style={{fontSize:24,fontWeight:500}}>{s.v}</div>
+            <div style={{fontSize:11,marginTop:3,color:s.up?C.teal.b600:"#9ca3af"}}>{s.d}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"flex",borderRadius:12,overflow:"hidden",border:"0.5px solid #e5e7eb"}}>
+        {[{ic:"ti-id-badge",lb:"Health Identity",v:4,sub:"Unified profiles",c:C.teal},{ic:"ti-brain",lb:"AI Communication",v:3,sub:"Logs summarised",c:C.blue},{ic:"ti-language",lb:"Health Literacy",v:2,sub:"Plans simplified",c:C.amber}].map((p,i)=>(
+          <div key={p.lb} style={{flex:1,padding:"14px 16px",background:p.c.b50,borderLeft:i>0?"1px solid #e5e7eb":"none"}}>
+            <i className={`ti ${p.ic}`} style={{fontSize:18,color:p.c.b600}}/>
+            <div style={{fontSize:12,fontWeight:500,color:p.c.b600,marginTop:4}}>{p.lb}</div>
+            <div style={{fontSize:22,fontWeight:500,margin:"4px 0 2px"}}>{p.v}</div>
+            <div style={{fontSize:11,color:"#6b7280"}}>{p.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-users"/> Recent patients</div>
+            <span onClick={()=>go("pts")} style={{fontSize:12,color:C.teal.b600,cursor:"pointer"}}>View all</span>
+          </div>
+          {PATIENTS.map(p=>(
+            <div key={p.id} onClick={()=>{pick(p);go("id");}} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"0.5px solid #f3f4f6",cursor:"pointer"}}>
+              <Av ini={p.ini} c={p.c} sz={28}/>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:500}}>{p.name}</div>
+                <div style={{fontSize:11}}>{p.logs.length?<Pill c={C.teal}>Summarised</Pill>:<Pill c={C.amber}>No logs</Pill>}</div>
+              </div>
+              <div style={{fontSize:11,fontFamily:"monospace",color:"#9ca3af"}}>{p.id}</div>
+            </div>
+          ))}
+        </Card>
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-message-dots"/> Latest AI summary</div>
+            <Pill c={C.blue}><i className="ti ti-sparkles"/> Claude AI</Pill>
+          </div>
+          {PATIENTS.filter(p=>p.logs.length>0).slice(0,1).map(p=>(
+            <div key={p.id}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <Av ini={p.ini} c={p.c} sz={24}/><span style={{fontSize:13,fontWeight:500}}>{p.name}</span>
+                <span style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>{p.logs[0].date}</span>
+              </div>
+              <div style={{fontSize:12,color:"#6b7280",lineHeight:1.6,marginBottom:10,fontStyle:"italic"}}>"{p.logs[0].text.slice(0,100)}…"</div>
+              {p.logs[0].ai && <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",fontSize:13,lineHeight:1.7,color:"#374151",borderLeft:`2px solid ${C.blue.b400}`}}>{p.logs[0].ai}</div>}
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── Patients ── */
+function PatientsList({ go, pick }) {
+  const [q, setQ] = useState("");
+  const list = PATIENTS.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())||p.id.includes(q));
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div><div style={{fontSize:22,fontWeight:600}}>Patients</div><div style={{fontSize:13,color:"#6b7280",marginTop:2}}>{PATIENTS.length} patients in your care</div></div>
+        <Btn primary><i className="ti ti-plus"/> Add patient</Btn>
+      </div>
+      <div style={{position:"relative"}}>
+        <i className="ti ti-search" style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:"#9ca3af",fontSize:16}}/>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name or code…" style={{width:"100%",padding:"9px 12px 9px 36px",borderRadius:8,border:"0.5px solid #e5e7eb",fontSize:13}}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {list.map(p=>(
+          <Card key={p.id}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+              <Av ini={p.ini} c={p.c} sz={40}/>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:500,fontSize:15}}>{p.name}</div>
+                <div style={{fontSize:12,color:"#6b7280"}}>{p.dx}</div>
+              </div>
+              <div style={{fontFamily:"monospace",fontSize:11,color:"#9ca3af",background:"#f9fafb",padding:"3px 8px",borderRadius:6}}>{p.id}</div>
+            </div>
+            <div style={{borderTop:"0.5px solid #f3f4f6",paddingTop:10,display:"flex",flexDirection:"column",gap:5}}>
+              <div style={{fontSize:12,color:"#6b7280"}}><b style={{color:"#374151"}}>Age:</b> {p.age}</div>
+              <div style={{fontSize:12,color:"#6b7280"}}><b style={{color:"#374151"}}>Meds:</b> {p.meds.join(", ")}</div>
+              <div style={{fontSize:12,color:"#6b7280",display:"flex",alignItems:"center",gap:6}}><b style={{color:"#374151"}}>Logs:</b>{p.logs.length?<Pill c={C.teal}>{p.logs.length} session{p.logs.length>1?"s":""}</Pill>:<Pill c={C.amber}>None yet</Pill>}</div>
+            </div>
+            <div style={{marginTop:12,display:"flex",gap:8}}>
+              <Btn onClick={()=>{pick(p);go("id");}} sx={{flex:1,justifyContent:"center",fontSize:12}}><i className="ti ti-id-badge"/> Profile</Btn>
+              <Btn onClick={()=>{pick(p);go("ai");}} sx={{flex:1,justifyContent:"center",fontSize:12}}><i className="ti ti-message-dots"/> Logs</Btn>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Pillar 1: Health Identity ── */
+function HealthIdentity({ sel, pick }) {
+  const [code, setCode] = useState("");
+  const [err, setErr] = useState("");
+  const p = sel || PATIENTS[0];
+
+  const lookup = () => {
+    const f = PATIENTS.find(pt=>pt.id===code.trim().toUpperCase());
+    if(f){pick(f);setErr("");}else setErr("No patient found with that code.");
+  };
+
+  const notes = {
+    "MB-3847":"NKDA. Note: patient experiences heightened anxiety in group settings.",
+    "MB-2210":"Penicillin allergy (rash). History of insomnia.",
+    "MB-5521":"NKDA. Trauma-informed care required.",
+    "MB-1094":"Sulfa allergy. Monitor for mixed episodes.",
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div><div style={{fontSize:22,fontWeight:600}}>Health Identity</div><div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Unified patient profiles — shareable by unique code</div></div>
+
+      <Card sx={{background:C.teal.b50,border:`0.5px solid ${C.teal.b100}`}}>
+        <div style={{fontSize:13,fontWeight:500,color:C.teal.b600,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-qrcode"/> Enter patient share code</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={code} onChange={e=>setCode(e.target.value)} onKeyDown={e=>e.key==="Enter"&&lookup()} placeholder="e.g. MB-3847" style={{flex:1,padding:"8px 12px",borderRadius:8,border:`0.5px solid ${C.teal.b100}`,fontSize:13,fontFamily:"monospace",letterSpacing:"0.05em",background:"white"}}/>
+          <Btn primary onClick={lookup}><i className="ti ti-search"/> Look up</Btn>
+        </div>
+        {err&&<div style={{fontSize:12,color:C.coral.b600,marginTop:6}}>{err}</div>}
+        <div style={{fontSize:11,color:C.teal.b600,marginTop:8}}>Try: MB-3847 · MB-2210 · MB-5521 · MB-1094</div>
+      </Card>
+
+      <div style={{display:"flex",gap:0,borderBottom:"0.5px solid #e5e7eb"}}>
+        {PATIENTS.map(pt=>(
+          <div key={pt.id} onClick={()=>pick(pt)} style={{padding:"7px 14px",fontSize:13,cursor:"pointer",color:p.id===pt.id?C.teal.b600:"#6b7280",borderBottom:p.id===pt.id?`2px solid ${C.teal.b400}`:"2px solid transparent",fontWeight:p.id===pt.id?500:400,marginBottom:-0.5}}>{pt.name.split(" ")[0]}</div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Card>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+            <Av ini={p.ini} c={p.c} sz={48}/>
+            <div>
+              <div style={{fontSize:16,fontWeight:500}}>{p.name}</div>
+              <div style={{fontSize:13,color:"#6b7280"}}>{p.dx}</div>
+              <div style={{fontFamily:"monospace",fontSize:12,color:p.c.b600,background:p.c.b50,display:"inline-block",padding:"2px 8px",borderRadius:6,marginTop:4}}>{p.id}</div>
+            </div>
+          </div>
+          <div style={{borderTop:"0.5px solid #f3f4f6",paddingTop:12,display:"flex",flexDirection:"column",gap:8}}>
+            {[{lb:"Age",v:p.age,ic:"ti-user"},{lb:"Specialist",v:"Dr. Keerthika",ic:"ti-stethoscope"},{lb:"Diagnosis",v:p.dx,ic:"ti-clipboard-list"}].map(r=>(
+              <div key={r.lb} style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}>
+                <i className={`ti ${r.ic}`} style={{color:"#9ca3af",fontSize:15,width:18}}/>
+                <span style={{color:"#6b7280",minWidth:80}}>{r.lb}</span>
+                <span style={{color:"#111",fontWeight:500}}>{r.v}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <Card>
+            <div style={{fontSize:13,fontWeight:500,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-pill" style={{color:C.teal.b600}}/> Medications</div>
+            {p.meds.map(m=>(
+              <div key={m} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"0.5px solid #f9fafb",fontSize:13}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:C.teal.b400}}/>{m}
+              </div>
+            ))}
+          </Card>
+          <Card>
+            <div style={{fontSize:13,fontWeight:500,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-alert-triangle" style={{color:C.amber.b600}}/> Allergies & notes</div>
+            <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>{notes[p.id]}</div>
+          </Card>
+        </div>
+      </div>
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-share" style={{color:C.teal.b600}}/> Share profile with new specialist</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,background:"#f9fafb",borderRadius:8,padding:"12px 14px",border:"0.5px solid #e5e7eb"}}>
+          <i className="ti ti-qrcode" style={{fontSize:22,color:"#9ca3af"}}/>
+          <span style={{fontFamily:"monospace",fontSize:18,fontWeight:500,color:C.teal.b600,letterSpacing:"0.1em",flex:1}}>{p.id}-XLQP</span>
+          <Btn onClick={()=>navigator.clipboard?.writeText(`${p.id}-XLQP`)}><i className="ti ti-copy"/> Copy</Btn>
+        </div>
+        <div style={{fontSize:12,color:"#9ca3af",marginTop:8}}>Any specialist can enter this code to instantly access {p.name.split(" ")[0]}'s unified health profile.</div>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Pillar 2: AI Sessions ── */
+function AIComms({ sel, pick }) {
+  const [p, setP] = useState(sel||PATIENTS[0]);
+  const [patLogs, setPatLogs] = useState(()=>PATIENTS.reduce((a,pt)=>({...a,[pt.id]:[...pt.logs.map(l=>({...l}))]}),{}));
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(()=>{ if(sel) setP(sel); },[sel]);
+
+  const logs = patLogs[p.id]||[];
+
+  const summarise = async(log,idx)=>{
+    setLoading(true); setErr("");
+    try {
+      const ai = await claude(
+        "You are a clinical assistant. Summarise the patient's session log in 3-5 professional sentences for their therapist. Focus on emotional indicators, progress, and suggested discussion points. Be concise and clinically relevant.",
+        `Patient: ${p.name}\nDiagnosis: ${p.dx}\nMood: ${log.mood}\n\nLog: ${log.text}`
+      );
+      setPatLogs(prev=>{const u={...prev};u[p.id]=u[p.id].map((l,i)=>i===idx?{...l,ai}:l);return u;});
+    } catch(e){ setErr("Could not reach Claude API. Check your connection."); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div><div style={{fontSize:22,fontWeight:600}}>AI Session Communication</div><div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Patient logs → Claude AI → Therapist summaries</div></div>
+
+      <div style={{display:"flex",gap:0,borderBottom:"0.5px solid #e5e7eb"}}>
+        {PATIENTS.map(pt=>(
+          <div key={pt.id} onClick={()=>setP(pt)} style={{padding:"7px 14px",fontSize:13,cursor:"pointer",color:p.id===pt.id?C.blue.b600:"#6b7280",borderBottom:p.id===pt.id?`2px solid ${C.blue.b400}`:"2px solid transparent",fontWeight:p.id===pt.id?500:400,marginBottom:-0.5,display:"flex",alignItems:"center",gap:6}}>
+            {pt.name.split(" ")[0]}
+            {(patLogs[pt.id]||[]).length>0&&<span style={{width:6,height:6,borderRadius:"50%",background:C.teal.b400,display:"inline-block"}}/>}
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.blue.b50,borderRadius:8,border:`0.5px solid ${C.blue.b100}`}}>
+        <Av ini={p.ini} c={p.c} sz={32}/>
+        <div><div style={{fontSize:13,fontWeight:500}}>{p.name}</div><div style={{fontSize:12,color:"#6b7280"}}>{p.dx} · {p.id}</div></div>
+        <div style={{marginLeft:"auto"}}><Pill c={C.blue}>{logs.length} log{logs.length!==1?"s":""}</Pill></div>
+      </div>
+
+      {logs.length===0&&(
+        <Card sx={{textAlign:"center",padding:40,color:"#9ca3af"}}>
+          <i className="ti ti-file-off" style={{fontSize:32,marginBottom:10,display:"block"}}/>
+          <div style={{fontSize:14}}>No session logs yet for {p.name.split(" ")[0]}</div>
+          <div style={{fontSize:12,marginTop:4}}>Ask the patient to submit their 60-second log.</div>
+        </Card>
+      )}
+
+      {logs.map((log,idx)=>(
+        <Card key={idx}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <Pill c={log.mood==="Better"?C.teal:log.mood==="Harder"?C.coral:C.amber}>
+              {log.mood==="Better"?"😌":log.mood==="Harder"?"😔":"😐"} {log.mood}
+            </Pill>
+            <span style={{fontSize:12,color:"#9ca3af",marginLeft:"auto"}}>{log.date}</span>
+          </div>
+          <div style={{fontSize:13,color:"#374151",lineHeight:1.7,fontStyle:"italic",marginBottom:14,background:"#f9fafb",borderRadius:8,padding:"10px 12px"}}>"{log.text}"</div>
+          {log.ai?(
+            <div>
+              <div style={{fontSize:11,color:"#9ca3af",marginBottom:6,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-sparkles" style={{color:C.blue.b600}}/> Claude AI summary for provider</div>
+              <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",fontSize:13,lineHeight:1.7,color:"#374151",borderLeft:`2px solid ${C.blue.b400}`}}>{log.ai}</div>
+            </div>
+          ):(
+            <Btn primary onClick={()=>summarise(log,idx)} sx={{fontSize:12}}>
+              {loading?<><i className="ti ti-loader"/> Generating…</>:<><i className="ti ti-sparkles"/> Generate AI summary</>}
+            </Btn>
+          )}
+        </Card>
+      ))}
+      {err&&<div style={{fontSize:13,color:C.coral.b600,background:C.coral.b50,padding:"10px 14px",borderRadius:8}}>{err}</div>}
+    </div>
+  );
+}
+
+/* ── Pillar 3: Health Literacy ── */
+function HealthLiteracy() {
+  const [plans, setPlans] = useState(CARE_PLANS_INIT);
+  const [sel, setSel] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState("English");
+  const [newTxt, setNewTxt] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const LANGS = ["English","Spanish","Mandarin","Hindi","Arabic","French","Portuguese"];
+  const plan = plans[sel];
+
+  const simplify = async()=>{
+    if(!plan.original) return;
+    setLoading(true);
+    try {
+      const simplified = await claude(
+        `You are a health literacy expert. Rewrite the medical instructions below in plain, friendly language the patient can easily understand. Use simple words, short sentences, and bullet points. Patient's language: ${lang}. Output ONLY the simplified text — no preamble.`,
+        plan.original
+      );
+      setPlans(plans.map((p,i)=>i===sel?{...p,simplified,lang}:p));
+    } catch(e){}
+    setLoading(false);
+  };
+
+  const addPlan = ()=>{
+    if(!newTxt.trim()) return;
+    const np={id:Date.now(),patient:"New Patient",pid:"MB-XXXX",date:"Today",original:newTxt,simplified:"",lang};
+    setPlans([...plans,np]); setSel(plans.length); setNewTxt(""); setShowAdd(false);
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div><div style={{fontSize:22,fontWeight:600}}>Care Plan Simplifier</div><div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Medical instructions → Claude AI → Patient-friendly language</div></div>
+        <Btn primary onClick={()=>setShowAdd(!showAdd)}><i className="ti ti-plus"/> New plan</Btn>
+      </div>
+
+      {showAdd&&(
+        <Card sx={{background:C.amber.b50,border:`0.5px solid ${C.amber.b100}`}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Paste provider's instructions</div>
+          <textarea value={newTxt} onChange={e=>setNewTxt(e.target.value)} placeholder="Enter medical instructions here…" style={{width:"100%",minHeight:100,padding:"10px 12px",borderRadius:8,border:"0.5px solid #e5e7eb",fontSize:13,resize:"vertical",background:"white"}}/>
+          <div style={{display:"flex",gap:8,marginTop:10}}>
+            <Btn primary onClick={addPlan}><i className="ti ti-check"/> Add</Btn>
+            <Btn onClick={()=>setShowAdd(false)}>Cancel</Btn>
+          </div>
+        </Card>
+      )}
+
+      <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:16,alignItems:"start"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {plans.map((pl,i)=>(
+            <div key={pl.id} onClick={()=>setSel(i)} style={{padding:"10px 12px",borderRadius:8,cursor:"pointer",fontSize:13,background:sel===i?C.amber.b50:"white",border:sel===i?`0.5px solid ${C.amber.b100}`:"0.5px solid #e5e7eb",color:sel===i?C.amber.b600:"#374151"}}>
+              <div style={{fontWeight:500}}>{pl.patient}</div>
+              <div style={{fontSize:11,color:"#9ca3af",marginTop:2}}>{pl.pid} · {pl.date}</div>
+              {pl.simplified&&<span style={{display:"inline-block",marginTop:4}}><Pill c={C.teal}>Simplified</Pill></span>}
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <Card>
+            <div style={{fontSize:13,fontWeight:500,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-clipboard-list" style={{color:"#9ca3af"}}/> Provider's instructions</div>
+            <div style={{fontSize:13,lineHeight:1.7,color:"#374151",background:"#f9fafb",padding:"12px 14px",borderRadius:8,whiteSpace:"pre-wrap"}}>{plan.original}</div>
+          </Card>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{fontSize:13,color:"#6b7280"}}>Patient language:</div>
+            <select value={lang} onChange={e=>setLang(e.target.value)} style={{padding:"6px 10px",borderRadius:8,border:"0.5px solid #e5e7eb",fontSize:13}}>
+              {LANGS.map(l=><option key={l}>{l}</option>)}
+            </select>
+            <Btn primary onClick={simplify} sx={{marginLeft:"auto"}}>
+              {loading?<><i className="ti ti-loader"/> Simplifying…</>:<><i className="ti ti-language"/> Simplify with Claude</>}
+            </Btn>
+          </div>
+          {plan.simplified?(
+            <Card sx={{background:C.teal.b50,border:`0.5px solid ${C.teal.b100}`}}>
+              <div style={{fontSize:12,color:C.teal.b600,marginBottom:8,display:"flex",alignItems:"center",gap:6,fontWeight:500}}><i className="ti ti-sparkles"/> Simplified for patient ({plan.lang})</div>
+              <div style={{fontSize:14,lineHeight:1.8,color:"#1f2937",whiteSpace:"pre-wrap"}}>{plan.simplified}</div>
+              <div style={{marginTop:12,display:"flex",gap:8}}>
+                <Btn onClick={()=>navigator.clipboard?.writeText(plan.simplified)}><i className="ti ti-copy"/> Copy</Btn>
+                <Btn onClick={simplify}><i className="ti ti-refresh"/> Re-generate</Btn>
+              </div>
+            </Card>
+          ):(
+            <Card sx={{textAlign:"center",padding:30,color:"#9ca3af"}}>
+              <i className="ti ti-language" style={{fontSize:28,marginBottom:8,display:"block"}}/>
+              <div style={{fontSize:13}}>Click "Simplify with Claude" to generate patient-friendly text</div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── My Log (patient view) ── */
+function MyLog() {
+  const [pt, setPt] = useState(PATIENTS[0]);
+  const [text, setText] = useState("");
+  const [mood, setMood] = useState("Better");
+  const [done, setDone] = useState(false);
+  const [myLogs, setMyLogs] = useState(()=>PATIENTS.reduce((a,p)=>({...a,[p.id]:[...p.logs.map(l=>({...l}))]}),{}));
+  const logs = myLogs[pt.id]||[];
+
+  const submit = ()=>{
+    if(!text.trim()) return;
+    setMyLogs(prev=>({...prev,[pt.id]:[{date:"Jun 15",mood,text,ai:""},...prev[pt.id]]}));
+    setText(""); setDone(true); setTimeout(()=>setDone(false),3000);
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div><div style={{fontSize:22,fontWeight:600}}>My Session Log</div><div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Your 60-second check-in after each session</div></div>
+
+      <Card sx={{background:"#f9fafb"}}>
+        <div style={{fontSize:12,color:"#6b7280",marginBottom:8}}>Logged in as:</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {PATIENTS.map(p=>(
+            <div key={p.id} onClick={()=>setPt(p)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,cursor:"pointer",background:pt.id===p.id?p.c.b50:"white",border:`0.5px solid ${pt.id===p.id?p.c.b100:"#e5e7eb"}`,fontSize:12,color:pt.id===p.id?p.c.b600:"#374151",fontWeight:pt.id===p.id?500:400}}>
+              <Av ini={p.ini} c={p.c} sz={20}/>{p.name.split(" ")[0]}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <Card>
+            <div style={{fontSize:13,fontWeight:500,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-pencil" style={{color:C.teal.b600}}/> How are you feeling, {pt.name.split(" ")[0]}?</div>
+            <div style={{fontSize:12,color:"#6b7280",marginBottom:6}}>Your mood today</div>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              {[["Better","😌",C.teal],["Same","😐",C.amber],["Harder","😔",C.coral]].map(([m,e,c])=>(
+                <button key={m} onClick={()=>setMood(m)} style={{padding:"7px 14px",borderRadius:20,fontSize:13,cursor:"pointer",border:mood===m?`1.5px solid ${c.b400}`:"0.5px solid #e5e7eb",background:mood===m?c.b50:"white",color:mood===m?c.b600:"#6b7280",fontFamily:"inherit"}}>
+                  {e} {m}
+                </button>
+              ))}
+            </div>
+            <div style={{fontSize:12,color:"#6b7280",marginBottom:6}}>What's been happening?</div>
+            <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="How are you feeling? Any changes, breakthroughs, or struggles? Your provider will read this before your next session…" style={{width:"100%",minHeight:100,padding:"10px 12px",borderRadius:8,border:"0.5px solid #e5e7eb",fontSize:13,resize:"none",lineHeight:1.6}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}}>
+              <span style={{fontSize:11,color:"#9ca3af"}}>{text.length} chars</span>
+              <Btn primary onClick={submit}><i className="ti ti-send"/> Submit log</Btn>
+            </div>
+            {done&&<div style={{marginTop:10,fontSize:13,color:C.teal.b600,background:C.teal.b50,padding:"8px 12px",borderRadius:8}}>✓ Submitted — your provider will review this before your next session.</div>}
+          </Card>
+          <Card>
+            <div style={{fontSize:13,fontWeight:500,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-qrcode" style={{color:C.teal.b600}}/> Your health code</div>
+            <div style={{display:"flex",alignItems:"center",gap:12,background:"#f9fafb",borderRadius:8,padding:"12px 14px"}}>
+              <i className="ti ti-qrcode" style={{fontSize:22,color:"#9ca3af"}}/>
+              <span style={{fontFamily:"monospace",fontSize:18,fontWeight:500,color:C.teal.b600,letterSpacing:"0.1em",flex:1}}>{pt.id}-XLQP</span>
+              <Btn onClick={()=>navigator.clipboard?.writeText(`${pt.id}-XLQP`)}><i className="ti ti-copy"/> Copy</Btn>
+            </div>
+            <div style={{fontSize:12,color:"#9ca3af",marginTop:8}}>Share with any new specialist to give them instant access to your full health profile.</div>
+          </Card>
+        </div>
+        <Card>
+          <div style={{fontSize:14,fontWeight:500,marginBottom:14,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-history"/> Past logs</div>
+          {logs.length===0&&<div style={{color:"#9ca3af",fontSize:13,textAlign:"center",padding:24}}>No logs submitted yet.</div>}
+          <div style={{maxHeight:460,overflowY:"auto"}}>
+          {logs.map((log,i)=>(
+            <div key={i} style={{borderBottom:i<logs.length-1?"0.5px solid #f3f4f6":"none",paddingBottom:12,marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <Pill c={log.mood==="Better"?C.teal:log.mood==="Harder"?C.coral:C.amber}>{log.mood==="Better"?"😌":log.mood==="Harder"?"😔":"😐"} {log.mood}</Pill>
+                <span style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>{log.date}</span>
+              </div>
+              <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>{log.text}</div>
+              {log.ai&&(
+                <div style={{marginTop:8,fontSize:12,background:"#eff6ff",borderLeft:`2px solid ${C.blue.b400}`,borderRadius:6,padding:"8px 10px",color:"#374151",lineHeight:1.6}}>
+                  <span style={{fontSize:11,color:C.blue.b600,display:"block",marginBottom:4}}>✦ Provider summary</span>{log.ai}
+                </div>
+              )}
+            </div>
+          ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── Root ── */
+function App() {
+  const [pg, setPg] = useState("dash");
+  const [sel, setSel] = useState(null);
+  const go = k => setPg(k);
+  const pick = p => setSel(p);
+
+  const views = {
+    dash:  <Dashboard go={go} pick={pick}/>,
+    pts:   <PatientsList go={go} pick={pick}/>,
+    id:    <HealthIdentity sel={sel} pick={pick}/>,
+    ai:    <AIComms sel={sel} pick={pick}/>,
+    lit:   <HealthLiteracy/>,
+    mylog: <MyLog/>,
+  };
+
+  return (
+    <div style={{display:"flex",height:"100vh",background:"#f3f4f6",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#111"}}>
+      <Sidebar pg={pg} go={go}/>
+      <main style={{flex:1,overflowY:"auto",padding:28}}>
+        {views[pg]}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
