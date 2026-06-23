@@ -471,7 +471,15 @@
 <!-- NAV -->
 <nav>
   <div class="nav-brand">
-    <div class="nav-logo">M</div>
+    <svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="20" fill="#3D6FE8"/>
+      <path d="M14 72 Q50 28 86 72" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <line x1="17" y1="72" x2="17" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <line x1="83" y1="72" x2="83" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <line x1="10" y1="86" x2="90" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <rect x="47" y="14" width="6" height="22" rx="2" fill="white"/>
+      <rect x="38" y="22" width="24" height="6" rx="2" fill="white"/>
+</svg>
     <span class="nav-title">MedBridge</span>
     <span class="nav-badge">Patient Portal</span>
   </div>
@@ -533,7 +541,7 @@
 
           <div>
             <label>Today's therapist <span class="label-hint">— who did you see?</span></label>
-            <select>
+            <select id="therapistSelect">
               <option>Dr. Rivera — Physical Therapy</option>
               <option>Dr. Okonkwo — General Practice</option>
               <option>Dr. Mehta — Neurology</option>
@@ -563,10 +571,10 @@
 
           <div>
             <label>What happened in or since your last session?</label>
-            <textarea rows="4" placeholder="e.g. My left knee still feels stiff in the morning, but the stretches helped by afternoon. I managed to walk 20 minutes without stopping…"></textarea>
+            <textarea id="logTextarea" rows="4" placeholder="e.g. My left knee still feels stiff in the morning, but the stretches helped by afternoon. I managed to walk 20 minutes without stopping…"></textarea>
           </div>
 
-          <button class="btn-primary">Submit log → AI will summarize</button>
+        <button class="btn-primary" id="submitBtn" onclick="submitLog()">Submit log → AI will summarize</button>
         </div>
       </div>
     </div>
@@ -646,7 +654,7 @@
       <div class="grid-2" style="gap:20px;">
         <div>
           <label>Paste instructions from your provider <span class="label-hint">— medical language is fine</span></label>
-          <textarea rows="5" placeholder="e.g. Patient to perform quadriceps isometric contractions with 5-second holds, 3 sets of 15 reps, twice daily. Avoid loaded knee flexion beyond 60° for 6 weeks. Follow up with radiography if symptoms persist…"></textarea>
+          <textarea id="simplifyTextarea" rows="5" placeholder="e.g. Patient to perform quadriceps isometric contractions with 5-second holds, 3 sets of 15 reps, twice daily. Avoid loaded knee flexion beyond 60° for 6 weeks. Follow up with radiography if symptoms persist…"></textarea>
           <div style="margin-top:12px;">
             <label>Translate into</label>
             <div class="lang-row">
@@ -657,14 +665,12 @@
               <div class="lang-chip">Tagalog</div>
             </div>
           </div>
-          <button class="btn-primary" style="margin-top:4px;">Simplify this for me →</button>
+          <button class="btn-primary" id="simplifyBtn" onclick="simplifyInstructions()" style="margin-top:4px;">Simplify this for me →</button>
         </div>
         <div>
           <div class="simplifier-out">
             <div class="out-label">✦ Simplified by Claude</div>
-            <p>Tighten your thigh muscle (squeeze it like you're pressing the back of your knee into the floor) and hold for 5 seconds. Rest, then repeat 15 times. Do this 2 times a day.</p>
-            <p style="margin-top:10px;">For 6 weeks, try not to bend your knee past about halfway — so no deep squats or kneeling on the floor yet.</p>
-            <p style="margin-top:10px;">If your knee still hurts after a few weeks, your doctor will take an X-ray to check what's going on.</p>
+            <p id="simplifyOutput">Your simplified instructions will appear here after you click Simplify.</p>
           </div>
         </div>
       </div>
@@ -674,7 +680,6 @@
 </div>
 
 <script>
-  // Mood button toggle
   document.querySelectorAll('.mood-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
@@ -682,13 +687,77 @@
     });
   });
 
-  // Language chip toggle
   document.querySelectorAll('.lang-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
     });
   });
+
+  async function submitLog() {
+    const logText = document.getElementById('logTextarea').value;
+    const mood = document.querySelector('.mood-btn.active')?.title || 'Not selected';
+    const therapist = document.getElementById('therapistSelect').value;
+    const btn = document.getElementById('submitBtn');
+    if (!logText.trim()) { alert('Please write something in your log first!'); return; }
+    btn.textContent = '⏳ Claude is summarizing...';
+    btn.disabled = true;
+    try {
+      const response = await fetch('http://127.0.0.1:5000/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ log: logText, therapist, mood })
+      });
+      const data = await response.json();
+      if (!data.summary) throw new Error(data.error || 'No summary returned');
+      btn.textContent = '✅ Submitted! Therapist will see your summary.';
+      document.getElementById('logTextarea').value = '';
+      setTimeout(() => { btn.textContent = 'Submit log → AI will summarize'; btn.disabled = false; }, 3000);
+    } catch (err) {
+      btn.textContent = 'Submit log → AI will summarize';
+      btn.disabled = false;
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function simplifyInstructions() {
+    const instructions = document.getElementById('simplifyTextarea').value;
+    const language = document.querySelector('.lang-chip.active')?.textContent || 'English';
+    const btn = document.getElementById('simplifyBtn');
+    const output = document.getElementById('simplifyOutput');
+    if (!instructions.trim()) { alert('Please paste some medical instructions first!'); return; }
+    btn.textContent = '⏳ Claude is simplifying...';
+    btn.disabled = true;
+    try {
+      const response = await fetch('http://127.0.0.1:5000/simplify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructions, language })
+      });
+      const data = await response.json();
+      if (!data.simplified) throw new Error(data.error || 'No output');
+      output.textContent = data.simplified;
+      btn.textContent = 'Simplify this for me →';
+      btn.disabled = false;
+    } catch (err) {
+      btn.textContent = 'Simplify this for me →';
+      btn.disabled = false;
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function loadCarePlan() {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/careplan');
+      const data = await response.json();
+      if (data.careplan) {
+        document.getElementById('simplifyOutput').textContent = data.careplan;
+      }
+    } catch (err) { console.log('No care plan yet'); }
+  }
+
+  loadCarePlan();
+  setInterval(loadCarePlan, 5000);
 </script>
 
 </body>

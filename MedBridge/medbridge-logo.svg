@@ -1,0 +1,21 @@
+<svg viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon background -->
+  <rect x="5" y="5" width="90" height="90" rx="18" fill="#3D6FE8"/>
+  <!-- Bridge arch -->
+  <path d="M18 68 Q50 28 82 68" stroke="white" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- Left pillar -->
+  <line x1="21" y1="68" x2="21" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Right pillar -->
+  <line x1="79" y1="68" x2="79" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Road -->
+  <line x1="12" y1="80" x2="88" y2="80" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Medical cross vertical -->
+  <rect x="47" y="15" width="6" height="20" rx="2" fill="white"/>
+  <!-- Medical cross horizontal -->
+  <rect x="39" y="22" width="22" height="6" rx="2" fill="white"/>
+  <!-- Med text -->
+  <text x="112" y="62" font-family="Georgia, serif" font-size="44" font-weight="700" fill="#1A2340">Med</text>
+  <text x="206" y="62" font-family="Georgia, serif" font-size="44" font-weight="300" fill="#3D6FE8">Bridge</text>
+  <!-- Tagline -->
+  <text x="113" y="80" font-family="Arial, sans-serif" font-size="11" fill="#5A6478" letter-spacing="1.5">PATIENTS · PROVIDERS · UNDERSTANDING</text>
+</svg>

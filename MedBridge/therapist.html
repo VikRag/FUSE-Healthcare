@@ -11,8 +11,8 @@
       --surface:   #FFFFFF;
       --surface2:  #EDE9FE;
       --ink:       #1C1A2E;
-      --ink-soft:  #6B648A;
-      --accent:    #6C4FF6;
+      --ink-soft:  #3D6FE8;
+      --accent:    #6B648A;
       --accent2:   #22C8A2;
       --warn:      #F6934F;
       --border:    #DDD9F5;
@@ -509,8 +509,16 @@
 <aside class="sidebar">
   <div class="sidebar-brand">
     <div class="sidebar-logo">
-      <div class="logo-mark">M</div>
-      <span class="sidebar-title">MedBridge</span>
+      <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="20" fill="#3D6FE8"/>
+      <path d="M14 72 Q50 28 86 72" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <line x1="17" y1="72" x2="17" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <line x1="83" y1="72" x2="83" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <line x1="10" y1="86" x2="90" y2="86" stroke="white" stroke-width="5" stroke-linecap="round"/>
+      <rect x="47" y="14" width="6" height="22" rx="2" fill="white"/>
+     <rect x="38" y="22" width="24" height="6" rx="2" fill="white"/>
+</svg>
+<span class="sidebar-title">MedBridge</span>
     </div>
     <div class="sidebar-role">Therapist Portal</div>
   </div>
@@ -572,7 +580,7 @@
     <div class="stat-strip">
       <div class="stat-tile hl">
         <div class="stat-tile-label">New AI summaries</div>
-        <div class="stat-tile-val">3</div>
+        <div class="stat-tile-val" id="summaryCount">0</div>
         <div class="stat-tile-sub">Ready to review</div>
       </div>
       <div class="stat-tile">
@@ -662,20 +670,20 @@
           <div class="summary-patient-row">
             <div class="summary-ava">JS</div>
             <div>
-              <div class="summary-name">Jamie Santos</div>
-              <div class="summary-date">Session log · Today, 8:42 AM</div>
+              <div class="summary-name" id="summaryName">Jamie Santos</div>
+              <div class="summary-date" id="summaryDate">Waiting for patient log...</div>
             </div>
           </div>
 
           <div class="ai-badge">✦ Claude AI Summary</div>
 
           <div class="mood-display">
-            <div class="mood-chip">😄 <span>Mood: Good</span></div>
+            <div class="mood-chip">😄 <span id="moodText">Mood: —</span></div>
             <div class="mood-chip">📈 <span>Progress: Improving</span></div>
           </div>
 
-          <div class="summary-text">
-            Jamie reports continued improvement in left knee stiffness, noting that morning tightness tends to ease by early afternoon following the prescribed stretching routine. This session marks a meaningful milestone: completing a 20-minute uninterrupted walk, which had not been achievable in the prior two sessions. Motivation appears high and adherence to home exercises is self-reported as consistent. No new symptoms or concerns were flagged; Jamie remains on track with the 6-week protocol.
+          <div class="summary-text" id="summaryText">
+            Once a patient submits a log, Claude AI will generate a summary here.
           </div>
 
           <div style="display:flex;gap:10px;">
@@ -698,8 +706,8 @@
           <div class="card-body">
             <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Enter a patient's unique MedBridge code to instantly load their full health history.</p>
             <div class="lookup-box">
-              <input type="text" placeholder="e.g. MB-4829-XK"/>
-              <button class="btn-primary">Look up</button>
+              <input type="text" id="lookupInput" placeholder="e.g. MB-4829-XK"/>
+              <button class="btn-primary" onclick="lookupPatient()" style="width:auto;padding:12px 18px;">Look up</button>
             </div>
             <div class="lookup-result">
               <div style="font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Loaded: Jamie Santos</div>
@@ -754,12 +762,12 @@
               </div>
               <div>
                 <label>Clinical instructions <span class="label-hint">— write in your usual language</span></label>
-                <textarea rows="5" placeholder="e.g. Continue quadriceps isometric contractions 3×15 reps BID. Introduce single-leg press at 50% bodyweight from week 3. Avoid loaded knee flexion >60° until reassessment. Follow up 2 weeks…"></textarea>
+                <textarea id="carePlanText" rows="5" placeholder="e.g. Continue quadriceps isometric contractions 3×15 reps BID. Introduce single-leg press at 50% bodyweight from week 3. Avoid loaded knee flexion >60° until reassessment. Follow up 2 weeks…"></textarea>
               </div>
               <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--ink-soft);border:1px solid var(--border);">
                 ✦ Claude will automatically simplify this into plain language and send it to the patient's portal.
               </div>
-              <button class="btn-primary">Send care plan → patient receives simplified version</button>
+              <button class="btn-primary" id="sendCarePlanBtn" onclick="sendCarePlan()">Send care plan → patient receives simplified version</button>
             </div>
           </div>
         </div>
@@ -768,6 +776,78 @@
     </div>
   </div>
 </main>
+<script>
+  document.getElementById('dashDate') && (document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}));
 
+  const patientDB = {
+    'MB-4829-XK': { name:'Jamie Santos', diagnoses:'Patellofemoral syndrome, Mild hypertension', medications:'Lisinopril 10mg · Ibuprofen 400mg PRN', allergies:'Penicillin, Latex', team:'Dr. Rivera · Dr. Okonkwo · Dr. Mehta' },
+    'MB-3341-ML': { name:'Morgan Lee', diagnoses:'Chronic lower back pain', medications:'Naproxen 500mg', allergies:'None known', team:'Dr. Rivera · Dr. Okonkwo' },
+    'MB-7721-AK': { name:'Aisha Khan', diagnoses:'Rotator cuff tendinitis', medications:'Ibuprofen 400mg PRN', allergies:'Sulfa drugs', team:'Dr. Rivera · Dr. Patel' },
+    'MB-5512-RP': { name:'Rafael Pinto', diagnoses:'Ankle sprain Grade II', medications:'Acetaminophen 500mg PRN', allergies:'Aspirin', team:'Dr. Rivera · Dr. Okonkwo' }
+  };
+
+  function lookupPatient() {
+    const code = document.getElementById('lookupInput').value.trim().toUpperCase();
+    const p = patientDB[code];
+    const result = document.querySelector('.lookup-result');
+    if (!p) {
+      result.innerHTML = '<div style="font-size:13px;color:red;">❌ Code not found. Try: MB-4829-XK</div>';
+      return;
+    }
+    result.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">✅ Loaded: ${p.name}</div>
+      <div class="lr-row"><div class="lr-icon">🩺</div><div><div class="lr-label">Diagnoses</div><div class="lr-val">${p.diagnoses}</div></div></div>
+      <div class="lr-row"><div class="lr-icon">💊</div><div><div class="lr-label">Medications</div><div class="lr-val">${p.medications}</div></div></div>
+      <div class="lr-row"><div class="lr-icon">⚠️</div><div><div class="lr-label">Allergies</div><div class="lr-val">${p.allergies}</div></div></div>
+      <div class="lr-row"><div class="lr-icon">👩‍⚕️</div><div><div class="lr-label">Care team</div><div class="lr-val">${p.team}</div></div></div>
+    `;
+  }
+
+  document.getElementById('lookupInput').addEventListener('keypress', e => { if(e.key==='Enter') lookupPatient(); });
+
+  async function sendCarePlan() {
+    const instructions = document.getElementById('carePlanText').value;
+    const btn = document.getElementById('sendCarePlanBtn');
+    if (!instructions.trim()) { alert('Please write care instructions first!'); return; }
+    btn.textContent = '⏳ Claude is simplifying for patient...';
+    btn.disabled = true;
+    try {
+      const response = await fetch('http://127.0.0.1:5000/sendcareplan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructions })
+      });
+      const data = await response.json();
+      if (!data.simplified) throw new Error(data.error || 'No output');
+      btn.textContent = '✅ Care plan sent to patient!';
+      setTimeout(() => { btn.textContent = 'Send care plan → patient receives simplified version'; btn.disabled = false; }, 3000);
+    } catch (err) {
+      btn.textContent = 'Send care plan → patient receives simplified version';
+      btn.disabled = false;
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function loadSummary() {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/logs');
+      const data = await response.json();
+      const logs = data.logs;
+      if (!logs || logs.length === 0) return;
+      const latest = logs[0];
+      document.getElementById('summaryText').textContent = latest.summary;
+      document.getElementById('summaryName').textContent = latest.patient;
+      document.getElementById('summaryDate').textContent = 'Session log · ' + latest.date;
+      document.getElementById('moodText').textContent = 'Mood: ' + latest.mood;
+      document.getElementById('summaryCount').textContent = logs.length;
+    } catch (err) { console.log('Backend not connected'); }
+  }
+
+  loadSummary();
+  setInterval(loadSummary, 3000);
+</script>
 </body>
 </html>
+
+
+
