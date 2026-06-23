@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MedBridge — Unified Health Identity</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: Arial, sans-serif; background: #F0FDFA; min-height: 100vh; }
+
+    input, textarea, select, button { font-family: Arial, sans-serif; }
+
+    textarea { resize: vertical; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+    const { useState, useEffect } = React;
+
+    // ─── HELPERS ───────────────────────────────────────────
+
+    function generateCode() {
+
+      const L = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+      const N = "0123456789";
+
+      const l = () => L[Math.floor(Math.random() * L.length)];
+
+      const n = () => N[Math.floor(Math.random() * N.length)];
+
+      return `MB-${l()}${l()}${n()}${n()}${n()}`;
+
+    }
+
+    const DEMO_PROFILES = {
+
+      "MB-DM001": {
+
+        firstName: "Sarah", lastName: "Johnson", dob: "1985-04-12", gender: "Female",
+
+        phone: "+1 (555) 234-5678", email: "sarah.j@email.com",
+
+        diagnoses: "Type 2 Diabetes, Hypertension, Anxiety Disorder",
+
+        medications: "Metformin 500mg twice daily, Lisinopril 10mg once daily, Sertraline 50mg once daily",
+
+        allergies: "Penicillin (rash), Shellfish",
+
+        specialists: "Dr. Emily Chen (Endocrinologist) - City Medical Center\nDr. Mark Thompson (Cardiologist) - Downtown Clinic",
+
+        notes: "Prefers morning appointments. Has difficulty with complex medication schedules.",
+
+        code: "MB-DM001", createdAt: "2025-01-15T09:00:00Z",
+
+      },
+
+      "MB-DM002": {
+
+        firstName: "James", lastName: "Rivera", dob: "1972-09-03", gender: "Male",
+
+        phone: "+1 (555) 876-4321", email: "j.rivera@email.com",
+
+        diagnoses: "Chronic Lower Back Pain, Depression, Sleep Apnea",
+
+        medications: "Ibuprofen 400mg as needed, Escitalopram 10mg once daily",
+
+        allergies: "Latex, Aspirin",
+
+        specialists: "Dr. Aisha Patel (Psychiatrist) - Wellness Clinic\nDr. Howard Kim (Orthopedic) - Spine Center",
+
+        notes: "Uses CPAP machine. Spanish is his first language.",
+
+        code: "MB-DM002", createdAt: "2025-02-20T14:30:00Z",
+
+      },
+
+    };
+
+    // ─── COMPONENTS ────────────────────────────────────────
+
+    function Field({ label, value, onChange, placeholder, type = "text", textarea, select, options }) {
+
+      const base = {
+
+        width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10,
+
+        padding: "11px 14px", fontSize: 14, color: "#0F172A",
+
+        outline: "none", background: "#FAFAFA", display: "block",
+
+      };
+
+      return (
+<div style={{ marginBottom: 18 }}>
+<label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 6 }}>{label}</label>
+
+          {textarea ? (
+<textarea value={value} onChange={onChange} placeholder={placeholder} rows={3} style={{ ...base }} />
+
+          ) : select ? (
+<select value={value} onChange={onChange} style={{ ...base }}>
+<option value="">Select...</option>
+
+              {options.map(o => <option key={o}>{o}</option>)}
+</select>
+
+          ) : (
+<input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{ ...base }} />
+
+          )}
+</div>
+
+      );
+
+    }
+
+    // ─── PAGE: HOME ─────────────────────────────────────────
+
+    function Home({ setPage }) {
+
+      return (
+<div style={{ minHeight: "100vh", background: "#F0FDFA" }}>
+
+          {/* Hero */}
+<div style={{
+
+            background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
+
+            color: "#fff", textAlign: "center", padding: "80px 24px 60px",
+
+          }}>
+<div style={{
+
+              display: "inline-block", background: "rgba(255,255,255,0.2)",
+
+              borderRadius: 999, padding: "6px 20px", fontSize: 14,
+
+              marginBottom: 24, letterSpacing: 1,
+
+            }}>🏥 MedBridge</div>
+<h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 16, lineHeight: 1.2 }}>
+
+              Your Health Identity,<br />Everywhere You Go
+</h1>
+<p style={{ fontSize: 17, opacity: 0.85, marginBottom: 40, maxWidth: 460, margin: "0 auto 40px" }}>
+
+              One profile. Every specialist. No information lost.
+</p>
+<div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+<button onClick={() => setPage("register")} style={{
+
+                background: "#fff", color: "#0D9488", border: "none",
+
+                borderRadius: 10, padding: "14px 32px", fontSize: 16, fontWeight: 700, cursor: "pointer",
+
+              }}>Create Patient Profile</button>
+<button onClick={() => setPage("specialist")} style={{
+
+                background: "transparent", color: "#fff",
+
+                border: "2px solid rgba(255,255,255,0.6)",
+
+                borderRadius: 10, padding: "14px 32px", fontSize: 16, fontWeight: 600, cursor: "pointer",
+
+              }}>I'm a Specialist</button>
+</div>
+</div>
+
+          {/* Features */}
+<div style={{ display: "flex", gap: 24, padding: "48px 32px", justifyContent: "center", flexWrap: "wrap" }}>
+
+            {[
+
+              { icon: "🔐", title: "Unified Identity", desc: "All your medical data in one secure profile" },
+
+              { icon: "🔗", title: "Instant Sharing", desc: "Share with any specialist using a unique code" },
+
+              { icon: "📋", title: "Complete History", desc: "Medications, diagnoses, and referrals always ready" },
+
+            ].map(f => (
+<div key={f.title} style={{
+
+                background: "#fff", borderRadius: 16, padding: "32px 28px",
+
+                maxWidth: 280, flex: "1 1 220px",
+
+                boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
+
+              }}>
+<div style={{ fontSize: 36, marginBottom: 14 }}>{f.icon}</div>
+<h3 style={{ fontSize: 17, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>{f.title}</h3>
+<p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6 }}>{f.desc}</p>
+</div>
+
+            ))}
+</div>
+</div>
+
+      );
+
+    }
+
+    // ─── PAGE: PATIENT FORM ──────────────────────────────────
+
+    function PatientForm({ setPage }) {
+
+      const [step, setStep] = useState(1);
+
+      const [form, setForm] = useState({
+
+        firstName: "", lastName: "", dob: "", gender: "", phone: "", email: "",
+
+        diagnoses: "", medications: "", allergies: "", specialists: "", notes: "",
+
+      });
+
+      const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+      const handleSubmit = () => {
+
+        const code = generateCode();
+
+        const profile = { ...form, code, createdAt: new Date().toISOString() };
+
+        localStorage.setItem("medbridge_profile", JSON.stringify(profile));
+
+        setPage("profile");
+
+      };
+
+      const stepLabels = ["Personal Info", "Medical History", "Review"];
+
+      return (
+<div style={{ minHeight: "100vh", background: "#F0FDFA", padding: "24px 16px" }}>
+<div style={{ maxWidth: 660, margin: "0 auto" }}>
+<button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "#0D9488", cursor: "pointer", fontSize: 14, marginBottom: 16 }}>← Back</button>
+<h1 style={{ fontSize: 26, fontWeight: 800, color: "#0F172A", marginBottom: 6 }}>Create Your Health Profile</h1>
+<p style={{ fontSize: 14, color: "#64748B", marginBottom: 28 }}>Your information is stored securely on this device.</p>
+
+            {/* Progress Bar */}
+<div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+
+              {stepLabels.map((label, i) => (
+<React.Fragment key={label}>
+<div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+<div style={{
+
+                      width: 34, height: 34, borderRadius: "50%",
+
+                      background: step > i + 1 ? "#0D9488" : step === i + 1 ? "#0D9488" : "#E2E8F0",
+
+                      color: step >= i + 1 ? "#fff" : "#94A3B8",
+
+                      display: "flex", alignItems: "center", justifyContent: "center",
+
+                      fontSize: 14, fontWeight: 700,
+
+                    }}>
+
+                      {step > i + 1 ? "✓" : i + 1}
+</div>
+<span style={{ fontSize: 11, color: step === i + 1 ? "#0D9488" : "#94A3B8", fontWeight: step === i + 1 ? 700 : 400, whiteSpace: "nowrap" }}>{label}</span>
+</div>
+
+                  {i < 2 && <div style={{ flex: 1, height: 2, background: step > i + 1 ? "#0D9488" : "#E2E8F0", margin: "0 8px", marginBottom: 20 }} />}
+</React.Fragment>
+
+              ))}
+</div>
+
+            {/* Step 1 */}
+
+            {step === 1 && (
+<div style={{ background: "#fff", borderRadius: 20, padding: "32px 28px", boxShadow: "0 2px 20px rgba(0,0,0,0.07)" }}>
+<h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 24 }}>👤 Personal Information</h2>
+<div style={{ display: "flex", gap: 16 }}>
+<div style={{ flex: 1 }}><Field label="First Name" value={form.firstName} onChange={set("firstName")} placeholder="Sarah" /></div>
+<div style={{ flex: 1 }}><Field label="Last Name" value={form.lastName} onChange={set("lastName")} placeholder="Johnson" /></div>
+</div>
+<div style={{ display: "flex", gap: 16 }}>
+<div style={{ flex: 1 }}><Field label="Date of Birth" value={form.dob} onChange={set("dob")} type="date" /></div>
+<div style={{ flex: 1 }}><Field label="Gender" value={form.gender} onChange={set("gender")} select options={["Male", "Female", "Non-binary", "Prefer not to say"]} /></div>
+</div>
+<Field label="Phone Number" value={form.phone} onChange={set("phone")} placeholder="+1 (555) 000-0000" />
+<Field label="Email Address" value={form.email} onChange={set("email")} placeholder="sarah@email.com" type="email" />
+<button onClick={() => setStep(2)} style={{ background: "#0D9488", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", marginLeft: "auto", display: "block" }}>
+
+                  Continue →
+</button>
+</div>
+
+            )}
+
+            {/* Step 2 */}
+
+            {step === 2 && (
+<div style={{ background: "#fff", borderRadius: 20, padding: "32px 28px", boxShadow: "0 2px 20px rgba(0,0,0,0.07)" }}>
+<h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 24 }}>🏥 Medical History</h2>
+<Field label="Current Diagnoses" value={form.diagnoses} onChange={set("diagnoses")} textarea placeholder="e.g. Type 2 Diabetes, Hypertension, Anxiety Disorder" />
+<Field label="Current Medications" value={form.medications} onChange={set("medications")} textarea placeholder="e.g. Metformin 500mg twice daily, Lisinopril 10mg once daily" />
+<Field label="Allergies" value={form.allergies} onChange={set("allergies")} placeholder="e.g. Penicillin, Peanuts, Latex" />
+<Field label="Previous Specialists / Clinics" value={form.specialists} onChange={set("specialists")} textarea placeholder="e.g. Dr. Smith (Cardiologist) - City Hospital" />
+<Field label="Additional Notes" value={form.notes} onChange={set("notes")} textarea placeholder="Anything else your care team should know..." />
+<div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+<button onClick={() => setStep(1)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>← Back</button>
+<button onClick={() => setStep(3)} style={{ background: "#0D9488", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Review →</button>
+</div>
+</div>
+
+            )}
+
+            {/* Step 3: Review */}
+
+            {step === 3 && (
+<div style={{ background: "#fff", borderRadius: 20, padding: "32px 28px", boxShadow: "0 2px 20px rgba(0,0,0,0.07)" }}>
+<h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 24 }}>✅ Review Your Profile</h2>
+
+                {[
+
+                  { title: "Personal Information", items: [["Name", `${form.firstName} ${form.lastName}`], ["DOB", form.dob], ["Gender", form.gender], ["Phone", form.phone], ["Email", form.email]] },
+
+                  { title: "Medical History", items: [["Diagnoses", form.diagnoses], ["Medications", form.medications], ["Allergies", form.allergies], ["Specialists", form.specialists], ["Notes", form.notes]] },
+
+                ].map(sec => (
+<div key={sec.title} style={{ marginBottom: 22 }}>
+<h3 style={{ fontSize: 13, fontWeight: 700, color: "#0D9488", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>{sec.title}</h3>
+
+                    {sec.items.filter(([, v]) => v).map(([k, v]) => (
+<div key={k} style={{ display: "flex", gap: 12, marginBottom: 7, fontSize: 14 }}>
+<span style={{ color: "#64748B", minWidth: 110 }}>{k}:</span>
+<span style={{ color: "#0F172A" }}>{v}</span>
+</div>
+
+                    ))}
+</div>
+
+                ))}
+<div style={{ background: "#F0FDFA", border: "1.5px solid #99F6E4", borderRadius: 12, padding: "14px 18px", fontSize: 14, marginBottom: 24 }}>
+
+                  🔐 After saving, you'll receive a <strong>unique MedBridge Code</strong> to share with any specialist.
+</div>
+<div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+<button onClick={() => setStep(2)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>← Edit</button>
+<button onClick={handleSubmit} style={{ background: "#0D9488", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Save & Get My Code 🎉</button>
+</div>
+</div>
+
+            )}
+</div>
+</div>
+
+      );
+
+    }
+
+    // ─── PAGE: PATIENT PROFILE ───────────────────────────────
+
+    function PatientProfile({ setPage }) {
+
+      const [profile, setProfile] = useState(null);
+
+      const [copied, setCopied] = useState(false);
+
+      useEffect(() => {
+
+        const data = localStorage.getItem("medbridge_profile");
+
+        if (!data) { setPage("register"); return; }
+
+        setProfile(JSON.parse(data));
+
+      }, []);
+
+      if (!profile) return null;
+
+      const copyCode = () => {
+
+        navigator.clipboard.writeText(profile.code).catch(() => {});
+
+        setCopied(true);
+
+        setTimeout(() => setCopied(false), 2000);
+
+      };
+
+      const sections = [
+
+        { title: "Personal Information", icon: "👤", items: [["Full Name", `${profile.firstName} ${profile.lastName}`], ["Date of Birth", profile.dob], ["Gender", profile.gender], ["Phone", profile.phone], ["Email", profile.email]] },
+
+        { title: "Medical History", icon: "🏥", items: [["Diagnoses", profile.diagnoses], ["Medications", profile.medications], ["Allergies", profile.allergies]] },
+
+        { title: "Care Network", icon: "🔗", items: [["Previous Specialists", profile.specialists], ["Notes", profile.notes]] },
+
+      ];
+
+      return (
+<div style={{ minHeight: "100vh", background: "#F0FDFA", padding: "24px 16px" }}>
+<div style={{ maxWidth: 660, margin: "0 auto" }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+<button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "#0D9488", cursor: "pointer", fontSize: 14 }}>← Home</button>
+<button onClick={() => setPage("register")} style={{ background: "#fff", border: "1.5px solid #E2E8F0", color: "#0F172A", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Edit Profile</button>
+</div>
+
+            {/* Avatar + Name */}
+<div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
+<div style={{ width: 70, height: 70, borderRadius: "50%", background: "#0D9488", color: "#fff", fontSize: 24, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+
+                {profile.firstName?.[0]}{profile.lastName?.[0]}
+</div>
+<div>
+<h1 style={{ fontSize: 24, fontWeight: 800, color: "#0F172A", marginBottom: 4 }}>{profile.firstName} {profile.lastName}</h1>
+<p style={{ fontSize: 13, color: "#64748B" }}>{profile.gender} · DOB: {profile.dob}</p>
+<p style={{ fontSize: 13, color: "#64748B" }}>Member since {new Date(profile.createdAt).toLocaleDateString()}</p>
+</div>
+</div>
+
+            {/* Code Card */}
+<div style={{ background: "linear-gradient(135deg, #0D9488, #0F766E)", borderRadius: 16, padding: "24px 28px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+<div>
+<p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1 }}>🔐 Your MedBridge Code</p>
+<p style={{ fontSize: 34, fontWeight: 800, color: "#fff", margin: "0 0 8px", letterSpacing: 4, fontFamily: "monospace" }}>{profile.code}</p>
+<p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", margin: 0, maxWidth: 300 }}>Share this code with any specialist to give them instant access to your profile.</p>
+</div>
+<button onClick={copyCode} style={{ background: copied ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "12px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+
+                {copied ? "✓ Copied!" : "Copy Code"}
+</button>
+</div>
+
+            {/* Sections */}
+
+            {sections.map(s => (
+<div key={s.title} style={{ background: "#fff", borderRadius: 16, padding: "22px 24px", marginBottom: 14, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+<h2 style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", marginBottom: 18 }}>{s.icon} {s.title}</h2>
+
+                {s.items.filter(([, v]) => v).map(([k, v]) => (
+<div key={k} style={{ display: "flex", gap: 16, fontSize: 14, marginBottom: 10 }}>
+<span style={{ color: "#64748B", minWidth: 130, flexShrink: 0 }}>{k}</span>
+<span style={{ color: "#0F172A", lineHeight: 1.6 }}>{v}</span>
+</div>
+
+                ))}
+</div>
+
+            ))}
+<div style={{ display: "flex", justifyContent: "flex-end", paddingBottom: 40 }}>
+<button onClick={() => { if (window.confirm("Delete your profile? This cannot be undone.")) { localStorage.removeItem("medbridge_profile"); setPage("home"); } }} style={{ background: "none", border: "1.5px solid #FCA5A5", color: "#EF4444", borderRadius: 8, padding: "10px 20px", fontSize: 13, cursor: "pointer" }}>
+
+                🗑 Delete Profile
+</button>
+</div>
+</div>
+</div>
+
+      );
+
+    }
+
+    // ─── PAGE: SPECIALIST VIEW ───────────────────────────────
+
+    function SpecialistView({ setPage }) {
+
+      const [code, setCode] = useState("");
+
+      const [profile, setProfile] = useState(null);
+
+      const [error, setError] = useState("");
+
+      const [loading, setLoading] = useState(false);
+
+      const lookup = () => {
+
+        setError(""); setLoading(true);
+
+        setTimeout(() => {
+
+          setLoading(false);
+
+          const upper = code.trim().toUpperCase();
+
+          if (DEMO_PROFILES[upper]) { setProfile(DEMO_PROFILES[upper]); return; }
+
+          const saved = localStorage.getItem("medbridge_profile");
+
+          if (saved) { const p = JSON.parse(saved); if (p.code === upper) { setProfile(p); return; } }
+
+          setError("No patient found with this code. Please check and try again.");
+
+        }, 800);
+
+      };
+
+      const sections = profile ? [
+
+        { title: "Personal Information", icon: "👤", bg: "#EFF6FF", border: "#BFDBFE", items: [["Full Name", `${profile.firstName} ${profile.lastName}`], ["DOB", profile.dob], ["Gender", profile.gender], ["Phone", profile.phone], ["Email", profile.email]] },
+
+        { title: "Diagnoses", icon: "🩺", bg: "#FEF2F2", border: "#FECACA", items: [["Current Diagnoses", profile.diagnoses]] },
+
+        { title: "Medications & Allergies", icon: "💊", bg: "#FFFBEB", border: "#FDE68A", items: [["Medications", profile.medications], ["Allergies", profile.allergies]] },
+
+        { title: "Care Network", icon: "🔗", bg: "#F0FDF4", border: "#BBF7D0", items: [["Previous Specialists", profile.specialists], ["Notes", profile.notes]] },
+
+      ] : [];
+
+      return (
+<div style={{ minHeight: "100vh", background: "#F0FDFA", padding: "24px 16px" }}>
+<div style={{ maxWidth: 660, margin: "0 auto" }}>
+<button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "#0D9488", cursor: "pointer", fontSize: 14, marginBottom: 16 }}>← Home</button>
+<h1 style={{ fontSize: 26, fontWeight: 800, color: "#0F172A", marginBottom: 6 }}>Specialist Portal</h1>
+<p style={{ fontSize: 14, color: "#64748B", marginBottom: 24 }}>Enter a patient's MedBridge Code to view their complete health profile.</p>
+
+            {/* Code Input */}
+<div style={{ background: "#fff", borderRadius: 16, padding: "28px", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", marginBottom: 24 }}>
+<label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 10 }}>Patient's MedBridge Code</label>
+<div style={{ display: "flex", gap: 12 }}>
+<input
+
+                  value={code}
+
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+
+                  onKeyDown={e => e.key === "Enter" && lookup()}
+
+                  placeholder="e.g. MB-AB123"
+
+                  style={{ flex: 1, border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "12px 16px", fontSize: 16, color: "#0F172A", outline: "none", fontFamily: "monospace", letterSpacing: 2, background: "#FAFAFA" }}
+
+                />
+<button
+
+                  onClick={lookup}
+
+                  disabled={!code.trim() || loading}
+
+                  style={{ background: "#0D9488", color: "#fff", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", flexShrink: 0, opacity: (!code.trim() || loading) ? 0.6 : 1 }}>
+
+                  {loading ? "Searching..." : "Find Patient"}
+</button>
+</div>
+
+              {error && <p style={{ color: "#EF4444", fontSize: 13, marginTop: 10 }}>⚠️ {error}</p>}
+<p style={{ fontSize: 13, color: "#64748B", marginTop: 14 }}>
+
+                💡 Try demo codes: <code style={{ background: "#F1F5F9", padding: "2px 8px", borderRadius: 6, fontFamily: "monospace" }}>MB-DM001</code> or <code style={{ background: "#F1F5F9", padding: "2px 8px", borderRadius: 6, fontFamily: "monospace" }}>MB-DM002</code>
+</p>
+</div>
+
+            {/* Profile Result */}
+
+            {profile && (
+<div>
+
+                {/* Banner */}
+<div style={{ background: "linear-gradient(135deg, #0D9488, #0F766E)", borderRadius: 16, padding: "22px 26px", marginBottom: 16, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+<div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.25)", color: "#fff", fontSize: 20, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+
+                    {profile.firstName?.[0]}{profile.lastName?.[0]}
+</div>
+<div style={{ flex: 1 }}>
+<h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>{profile.firstName} {profile.lastName}</h2>
+<p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>DOB: {profile.dob} · {profile.gender}</p>
+</div>
+<div style={{ background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 600 }}>✓ Verified</div>
+</div>
+
+                {/* Data Sections */}
+
+                {sections.map(s => (
+<div key={s.title} style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
+<h3 style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", marginBottom: 14 }}>{s.icon} {s.title}</h3>
+
+                    {s.items.filter(([, v]) => v).map(([k, v]) => (
+<div key={k} style={{ display: "flex", gap: 14, fontSize: 14, marginBottom: 9 }}>
+<span style={{ color: "#64748B", minWidth: 150, flexShrink: 0 }}>{k}</span>
+<span style={{ color: "#0F172A", lineHeight: 1.6 }}>{v}</span>
+</div>
+
+                    ))}
+</div>
+
+                ))}
+<button onClick={() => { setProfile(null); setCode(""); }} style={{ background: "#F1F5F9", color: "#64748B", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, cursor: "pointer", marginTop: 8, marginBottom: 40 }}>
+
+                  Search Another Patient
+</button>
+</div>
+
+            )}
+</div>
+</div>
+
+      );
+
+    }
+
+    // ─── ROOT APP ────────────────────────────────────────────
+
+    function App() {
+
+      const [page, setPage] = useState("home");
+
+      return (
+<div>
+
+          {page === "home"       && <Home setPage={setPage} />}
+
+          {page === "register"   && <PatientForm setPage={setPage} />}
+
+          {page === "profile"    && <PatientProfile setPage={setPage} />}
+
+          {page === "specialist" && <SpecialistView setPage={setPage} />}
+</div>
+
+      );
+
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
+ 
